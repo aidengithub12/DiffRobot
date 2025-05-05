@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <Servo.h>
 // put function declarations here:
-
+double PIDControl(double setpoint) {};
 
 //pin definitions
 
@@ -42,6 +42,12 @@ int headServoZero = 0;
 int leftArmServoZero = 0;
 int rightArmServoZero = 0;
 
+
+//PID values
+const double kP = 1;
+const double kI = 0;
+const double KD = 0;
+
 void setup() {
   //Start serial monitor
   Serial.begin(9600);
@@ -69,6 +75,14 @@ void setup() {
   headServo.write(headServoZero);
   leftArmServo.write(leftArmServoZero);
   RightArmServo.write(rightArmServoZero);
+
+  //reset encoder values for drivetrain motors
+
+
+
+  //set interruptable pin functions
+
+
 }
 
 void loop() {
@@ -76,3 +90,8 @@ void loop() {
 }
 
 // put function definitions here:
+double PIDControl(double setpoint) {
+
+
+  
+}
