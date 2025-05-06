@@ -30,7 +30,8 @@ int motorLeftHallA;
 int motorLeftHallB; //TODO: set pin values
 
 //encoder variables
-
+volatile int leftMotorPulses = 0;
+volatile int rightMotorPulses = 0;
 
 
 //logging information
@@ -99,11 +100,13 @@ void setup() {
   RightArmServo.write(rightArmServoZero);
 
   //reset encoder values for drivetrain motors
-
+  rightMotorPulses = 0.0;
+  leftMotorPulses = 0.0;
 
 
   //set interruptable pin functions
-
+  attachInterrupt(motorLeftHallA, (readEncoderLeft),RISING);
+  attachInterrupt(motorRightHallA, (readEncoderRight), RISING);
 
   //read encoder value
   // inputleft = analogRead(encoderPinLeft);
@@ -132,20 +135,20 @@ double PIDControlRight(double Newsetpoint) {
 }
 
 void readEncoderLeft(){
-  int b = digitalRead(ENCB);
+  int b = digitalRead(motorLeftHallB);
   if(b > 0){
-    posi++;
+    leftMotorPulses++;
   }
   else{
-    posi--;
+    leftMotorPulses--;
   }
 }
 void readEncoderRight(){
-  int b = digitalRead(ENCB);
+  int b = digitalRead(motorRightHallB);
   if(b > 0){
-    posi++;
+    rightMotorPulses++;
   }
   else{
-    posi--;
+    rightMotorPulses--;
   }
 }
