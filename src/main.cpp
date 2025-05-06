@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <Servo.h>
+#include <PID_v1.h>
+
 // put function declarations here:
 double PIDControl(double setpoint) {};
 
@@ -20,6 +22,12 @@ int IN4 = 0;
   //GYRO pins
 int SCL = 0;
 int SDA = 0;
+
+//encoder pins
+int motorRightHallA;
+int motorRightHallB;
+int motorLeftHallA;
+int motorLeftHallB; //TODO: set pin values
 
 //encoder variables
 
@@ -47,6 +55,16 @@ int rightArmServoZero = 0;
 const double kP = 1;
 const double kI = 0;
 const double KD = 0;
+double setpoint;
+double inputleft;
+double outputleft;
+double inputright;
+double outputright;
+
+
+PID pidLeft(&inputleft, &outputleft, &setpoint, kP, kI, KD, DIRECT);
+PID pidRight(&inputright, &outputright, &setpoint, kP, kI, KD, DIRECT);
+
 
 void setup() {
   //Start serial monitor
@@ -64,6 +82,10 @@ void setup() {
   pinMode(IN4, OUTPUT);
   pinMode(SCL, OUTPUT);
   pinMode(SDA, INPUT); //TODO: Check this
+  pinMode(motorLeftHallA, INPUT_PULLUP);
+  pinMode(motorLeftHallB, INPUT_PULLUP);
+  pinMode(motorRightHallA, INPUT_PULLUP);
+  pinMode(motorRightHallB, INPUT_PULLUP);
 
 
   //servo pin declarations
@@ -83,15 +105,47 @@ void setup() {
   //set interruptable pin functions
 
 
+  //read encoder value
+  // inputleft = analogRead(encoderPinLeft);
+  // inputright = =analogRead(encoderPinRight);
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+  PIDControlLeft(100);
+  PIDControlRight(100);
+  analogWrite(ENA, outputleft);
+  analogWrite(ENB, outputright);
 }
 
 // put function definitions here:
-double PIDControl(double setpoint) {
-
-
+double PIDControlLeft(double Newsetpoint) {
+  setpoint = Newsetpoint;
   
+  return pidLeft.Compute(); 
+}
+double PIDControlRight(double Newsetpoint) {
+  setpoint = Newsetpoint;
+  
+  return pidRight.Compute(); 
+}
+
+void readEncoderLeft(){
+  int b = digitalRead(ENCB);
+  if(b > 0){
+    posi++;
+  }
+  else{
+    posi--;
+  }
+}
+void readEncoderRight(){
+  int b = digitalRead(ENCB);
+  if(b > 0){
+    posi++;
+  }
+  else{
+    posi--;
+  }
 }
