@@ -3,8 +3,11 @@
 #include <PID_v1.h>
 
 // put function declarations here:
-double PIDControl(double setpoint) {};
-
+double PIDControl(double setpoint);
+void readEncoderRight();
+void readEncoderLeft();
+double PIDControlLeft(double Newsetpoint);
+double PIDControlRight(double Newsetpoint);
 //pin definitions
 
   //servo pins
@@ -12,20 +15,20 @@ int headServoPin = 0; //TODO: change pin numbers based off hardware
 int leftArmServoPin = 0;
 int RightArmServoPin = 0;
   //motorController pins
-int ENA = 0;
-int ENB = 0;
-int IN1 = 0;
-int IN2 = 0;
-int IN3 = 0; 
-int IN4 = 0;
+int ENA = 53;
+int ENB = 52;
+int IN1 = 51;
+int IN2 = 49;
+int IN3 = 50; 
+int IN4 = 48;
 
   //GYRO pins
-int SCL = 0;
-int SDA = 0;
+// int SCL = 0;
+// int SDA = 0;
 
 //encoder pins
-int motorRightHallA;
-int motorRightHallB;
+int motorRightHallA = 2;
+int motorRightHallB = 3;
 int motorLeftHallA;
 int motorLeftHallB; //TODO: set pin values
 
@@ -53,10 +56,10 @@ int rightArmServoZero = 0;
 
 
 //PID values
-const double kP = 1;
+const double kP = 0;
 const double kI = 0;
 const double KD = 0;
-double setpoint;
+double setpoint=100;
 double inputleft;
 double outputleft;
 double inputright;
@@ -105,21 +108,40 @@ void setup() {
 
 
   //set interruptable pin functions
-  attachInterrupt(motorLeftHallA, (readEncoderLeft),RISING);
-  attachInterrupt(motorRightHallA, (readEncoderRight), RISING);
+  attachInterrupt(digitalPinToInterrupt(motorLeftHallA), (readEncoderLeft),RISING);
+  attachInterrupt(digitalPinToInterrupt(motorRightHallA), (readEncoderRight), RISING);
 
   //read encoder value
-  // inputleft = analogRead(encoderPinLeft);
-  // inputright = =analogRead(encoderPinRight);
-
+  inputleft = analogRead(motorLeftHallA);
+  inputright  =analogRead(motorRightHallA);
+  pidLeft.SetMode(AUTOMATIC);
+  pidRight.SetMode(AUTOMATIC);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  PIDControlLeft(100);
-  PIDControlRight(100);
+  pidLeft.Compute();
+  pidRight.Compute(); 
+  int comp = PIDControlLeft(100);
+  int c2 = PIDControlRight(100);
+  if (outputright < 0 || outputleft < 0) {
+    digitalWrite(IN1,LOW);
+    digitalWrite(IN2,HIGH);
+  }
+  else {
+    digitalWrite(IN1,HIGH);
+    digitalWrite(IN2,LOW);
+  }
+  inputleft = 0;
+  inputright = 10;
   analogWrite(ENA, outputleft);
   analogWrite(ENB, outputright);
+
+  Serial.print(leftMotorPulses);
+  Serial.print(",");
+  Serial.print(rightMotorPulses);
+  Serial.println("");
+
 }
 
 // put function definitions here:
