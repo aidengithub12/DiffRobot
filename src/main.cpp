@@ -33,8 +33,8 @@ volatile long encoderPulsesA = 0;
 volatile long encoderPulsesB = 0;
 
 //PID Constants
-double kP = 1;
-double kI = 0;
+double kP = 15;
+double kI = 5;
 double KD = 0;
 
 //time variables
@@ -46,7 +46,7 @@ float wheelDiameter = 0.035; //meters
 //motor speed
 float motorRPM = 0; //RPM
 //car speed
-float carSpeed = 0;
+float linearDisplacement = 0;
 //number of motors
 int numMotors = 2;
 //current values
@@ -57,8 +57,8 @@ int currentSpeed = 0;
 long prevT = 0;
 float eprev = 0;
 float eintegral = 0;
-const int tolerance = 10;
-int target = 1200;
+const int tolerance = 0.5;
+int target = 10; //meters
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -94,10 +94,10 @@ void loop() {
   if ((currentTime - startTime) > 1) {
     startTime = micros() / 1e-6;
     noInterrupts();
-    motorRPM = ((encoderPulsesA + encoderPulsesB) / numMotors) * 60;
+    motorRPM = ((encoderPulsesA + encoderPulsesB) / ( micros() - currentTime) * .5);
     interrupts();
   }
-  carSpeed = (motorRPM * (wheelDiameter * 3.14)) / 60;
+  linearDisplacement = ((encoderPulsesA)* 3.14 * wheelDiameter) / 12;
   
   // Serial.println("Motor: " + enA);
   // // runPID(1200, encoderPulsesA, enA, IN1, IN2);
@@ -112,7 +112,7 @@ void loop() {
   prevT = currT;
   int pos = 0;
   noInterrupts();
-  pos = encoderPulsesA;
+  pos = linearDisplacement;
   interrupts();
   //error
   int e = pos-target;
@@ -135,11 +135,12 @@ void loop() {
   if (u<0) {
     dir = -1;
   }
-  if (abs(e) < tolerance) {
+  if (abs(e) < tolerance || pwr < 75) {
     pwr = 0;
   }
   Serial.println(e);
   Serial.println(pwr);
+
   //signal the motor
   setMotor(dir, pwr, enA, IN1, IN2);
 
