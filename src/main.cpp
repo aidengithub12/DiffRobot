@@ -1,176 +1,308 @@
+//necessary imports
 #include <Arduino.h>
-#include <Servo.h>
-#include <PID_v1.h>
+//function definitions
+void moveMotor(int speed, int direction, int currentSpeed);
+void accelerate();
+void countPulsesA();
+void countPulsesB();
+void runPID(int target, int pulses, int motorEnable, int motorIN1, int motorIN2);         
+void setMotor(int dir, int speed, int motorEnable, int in1, int in2);
+//Motor Controller A
+int enA = 12;
+int IN1 = 25;
+int IN2 = 33;
 
-// put function declarations here:
-double PIDControl(double setpoint);
-void readEncoderRight();
-void readEncoderLeft();
-double PIDControlLeft(double Newsetpoint);
-double PIDControlRight(double Newsetpoint);
-//pin definitions
+//motor controller B
+int enB = 52;
+int IN1B = 50;
+int IN2B = 48;  
 
-  //servo pins
-int headServoPin = 0; //TODO: change pin numbers based off hardware
-int leftArmServoPin = 0;
-int RightArmServoPin = 0;
-  //motorController pins
-int ENA = 53;
-int ENB = 52;
-int IN1 = 51;
-int IN2 = 49;
-int IN3 = 50; 
-int IN4 = 48;
-
-  //GYRO pins
-// int SCL = 0;
-// int SDA = 0;
-
-//encoder pins
-int motorRightHallA = 2;
-int motorRightHallB = 3;
-int motorLeftHallA;
-int motorLeftHallB; //TODO: set pin values
-
-//encoder variables
-volatile int leftMotorPulses = 0;
-volatile int rightMotorPulses = 0;
+//encoder pins -- motor controller A2
+// int encoderPhaseA2 = 300;
+// int encoderPhaseB2 = 180;
+//encoder pins -- Motor Controller A1
+int encoderPhaseA = 35; //digital interrupt pin
+//Encoder power = 5V pin
+//Encoder ground = gnd pin
+int encoderPhaseB = 32;
 
 
-//logging information
 
+//Encoder Values
+volatile long encoderPulsesA = 0;
+volatile long encoderPulsesB = 0;
 
-//Gyro information
+//PID Constants
+double kP = 1;
+double kI = 0;
+double KD = 0;
 
+//time variables
+float startTime = 0;
+float currentTime = 0;
 
-//Servo definitions
-Servo headServo;
-Servo leftArmServo;
-Servo RightArmServo;
-
-
-//Servo zeroes
-int headServoZero = 0;
-int leftArmServoZero = 0;
-int rightArmServoZero = 0;
-
-
-//PID values
-const double kP = 0;
-const double kI = 0;
-const double KD = 0;
-double setpoint=100;
-double inputleft;
-double outputleft;
-double inputright;
-double outputright;
-
-
-PID pidLeft(&inputleft, &outputleft, &setpoint, kP, kI, KD, DIRECT);
-PID pidRight(&inputright, &outputright, &setpoint, kP, kI, KD, DIRECT);
-
-
+//wheel diameter
+float wheelDiameter = 0.035; //meters
+//motor speed
+float motorRPM = 0; //RPM
+//car speed
+float carSpeed = 0;
+//number of motors
+int numMotors = 2;
+//current values
+int currentPosition = 0; //in rotations
+int desiredPosition = 0; //in meters
+int error = 0;
+int currentSpeed = 0;
+long prevT = 0;
+float eprev = 0;
+float eintegral = 0;
+const int tolerance = 10;
+int target = 1200;
 void setup() {
-  //Start serial monitor
-  Serial.begin(9600);
-
-  //pinmodes
-  pinMode(headServoPin, OUTPUT);
-  pinMode(leftArmServoPin, OUTPUT);
-  pinMode(RightArmServoPin, OUTPUT);
-  pinMode(ENA, OUTPUT);
-  pinMode(ENB, OUTPUT);
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  // Serial1.begin(115200,Serial_8N1,17,16);
+  // Serial.println("Startup process began...");
+  //setup pins
+  pinMode(enA, OUTPUT);
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
-  pinMode(IN3, OUTPUT);
-  pinMode(IN4, OUTPUT);
-  pinMode(SCL, OUTPUT);
-  pinMode(SDA, INPUT); //TODO: Check this
-  pinMode(motorLeftHallA, INPUT_PULLUP);
-  pinMode(motorLeftHallB, INPUT_PULLUP);
-  pinMode(motorRightHallA, INPUT_PULLUP);
-  pinMode(motorRightHallB, INPUT_PULLUP);
+  
+  //set up encoder pins
+  pinMode(encoderPhaseA, INPUT_PULLUP);
+  pinMode(encoderPhaseB, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(encoderPhaseA), countPulsesA, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(encoderPhaseA2), countPulsesB, CHANGE);
+  //turn off motors
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  // digitalWrite(IN1B, LOW);
+  // digitalWrite(IN2B, LOW);
+  
 
-
-  //servo pin declarations
-  headServo.attach(headServoPin);
-  leftArmServo.attach(leftArmServoPin);
-  RightArmServo.attach(RightArmServoPin);
-
-  //set servo zeroes
-  headServo.write(headServoZero);
-  leftArmServo.write(leftArmServoZero);
-  RightArmServo.write(rightArmServoZero);
-
-  //reset encoder values for drivetrain motors
-  rightMotorPulses = 0.0;
-  leftMotorPulses = 0.0;
-
-
-  //set interruptable pin functions
-  attachInterrupt(digitalPinToInterrupt(motorLeftHallA), (readEncoderLeft),RISING);
-  attachInterrupt(digitalPinToInterrupt(motorRightHallA), (readEncoderRight), RISING);
-
-  //read encoder value
-  inputleft = analogRead(motorLeftHallA);
-  inputright  =analogRead(motorRightHallA);
-  pidLeft.SetMode(AUTOMATIC);
-  pidRight.SetMode(AUTOMATIC);
+  //timer start
+  startTime = micros() / 1e-6;
+  //Setup Finished
+  // Serial.println("Setup has finished.");
 }
 
 void loop() {
+  currentTime = micros() / 1e-6;
+
+
+  if ((currentTime - startTime) > 1) {
+    startTime = micros() / 1e-6;
+    noInterrupts();
+    motorRPM = ((encoderPulsesA + encoderPulsesB) / numMotors) * 60;
+    interrupts();
+  }
+  carSpeed = (motorRPM * (wheelDiameter * 3.14)) / 60;
+  
+  // Serial.println("Motor: " + enA);
+  // // runPID(1200, encoderPulsesA, enA, IN1, IN2);
+  // Serial.println("Motor: " + enB);
+  // runPID(2500, encoderPulsesB, enB, IN1B, IN2B);
   // put your main code here, to run repeatedly:
-  pidLeft.Compute();
-  pidRight.Compute(); 
-  int comp = PIDControlLeft(100);
-  int c2 = PIDControlRight(100);
-  if (outputright < 0 || outputleft < 0) {
-    digitalWrite(IN1,LOW);
-    digitalWrite(IN2,HIGH);
+  
+
+  // //time difference
+  long currT = micros();
+  float deltaT = ((float)(currT - prevT))/(1.0e6);
+  prevT = currT;
+  int pos = 0;
+  noInterrupts();
+  pos = encoderPulsesA;
+  interrupts();
+  //error
+  int e = pos-target;
+
+  // //derivative
+  float dedt = (e-eprev) / (deltaT);
+
+  //integral
+  eintegral = eintegral + e * deltaT;
+
+  //control signal
+  float u = kP*e + KD*dedt + kI*eintegral;
+  //motor power
+  float pwr = fabs(u);
+  if (pwr > 255) {
+    pwr = 255;
+  }
+  //motor direction
+  int dir = 1;
+  if (u<0) {
+    dir = -1;
+  }
+  if (abs(e) < tolerance) {
+    pwr = 0;
+  }
+  Serial.println(e);
+  Serial.println(pwr);
+  //signal the motor
+  setMotor(dir, pwr, enA, IN1, IN2);
+
+  //store previous error
+  eprev = e;
+
+  //logs
+  Serial.print(">setpoint:");
+  Serial.println(target);
+  Serial.print(">currentpos:");
+  Serial.println(pos);
+  // Serial.println("*********************************************************");
+  // Serial.print(target);
+  // Serial.print(" ");
+  // Serial.print(encoderPulsesA);
+  // Serial.println();
+  // Serial.println(pwr);
+  // Serial.println(analogRead(enA));
+  // Serial.println(currentSpeed);
+  // Serial.println(desiredPosition);
+  // Serial.println(motorRPM);
+  Serial.println("*********************************************************");
+  while (Serial.available() > 0) {
+    target = Serial.readString().toInt();
+    Serial.flush();
+  }
+  delay(200);
+}
+
+
+void runPID(int target, int pulses, int motorEnable, int motorIN1, int motorIN2) {
+
+  //time difference
+  long currT = micros();
+  float deltaT = ((float)(currT - prevT))/(1.0e6);
+  prevT = currT;
+  int pos = 0;
+  noInterrupts();
+  pos = pulses * wheelDiameter * 3.14;
+  interrupts();
+  //error
+  int e = pos-target;
+
+  //derivative
+  float dedt = (e-eprev) / (deltaT);
+
+  //integral
+  eintegral = eintegral + e * deltaT;
+
+  //control signal
+  float u = kP*e + KD*dedt + kI*eintegral;
+  //motor power
+  float pwr = fabs(u);
+  if (pwr > 255) {
+    pwr = 255;
+  }
+  //motor direction
+  int dir = 1;
+  if (u<0) {
+    dir = -1;
+  }
+  //signal the motor
+  setMotor(dir, pwr, motorEnable, motorIN1, motorIN2);
+
+  //store previous error
+  eprev = e;
+
+  //logs
+  // Serial.print(target);
+  // Serial.print(" ");
+  // Serial.print(encoderPulsesA);
+  // Serial.println();
+}
+
+
+void moveMotor(int speed, int direction /*forward = 1 backward = -1*/, int currentSpeed) {
+  
+  if (direction == 1) {
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, LOW);
+    for (int i = 0; i < speed; i++) {
+      analogWrite(enA, i);
+      delay(20);
+      // Serial.println(i);
+    }
+    // Serial.println("forward ran");
+    // Serial.println("EP: " + encoderPulses);
+    
+    // Serial.println("DA: " + digitalRead(encoderPhaseA));
+  }
+  else if (direction == -1) {
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, HIGH);
+    for (int i = 0; i < speed; i++) {
+      analogWrite(enA, i);
+      delay(20);
+    }
+    // Serial.println("backward Ran");
+  }
+  // analogWrite(enA, speed);
+  // Serial.println("speed changed");
+  currentSpeed = speed;
+}
+void accelerate() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2,HIGH);
+  for (int i = 0; i < 256; ++i) {
+    analogWrite(enA, i);
+    delay(20);
+  }
+  delay(2000);
+  for (int i = 255; i <=0; --i) {
+    analogWrite(enA, i);
+    delay(20);
+  }
+}
+void decelerateMotor(int currentSpeed) {
+  for (int i = currentSpeed; i >=0; i--){
+    analogWrite(enA, i);
+
+  }
+}
+
+void countPulsesA() {
+  
+  if (digitalRead(encoderPhaseB) != digitalRead(encoderPhaseA)) {
+    // Serial.println("Encoder --");
+    encoderPulsesA--;
+    // Serial.println((encoderPulses));
+    
+    // Serial.println("encoder A: " + (String) digitalRead(encoderPhaseA));
+    // Serial.println("Encoder B: " + (String) digitalRead(encoderPhaseB));
   }
   else {
-    digitalWrite(IN1,HIGH);
-    digitalWrite(IN2,LOW);
+    encoderPulsesA++;
   }
-  inputleft = 0;
-  inputright = 10;
-  analogWrite(ENA, outputleft);
-  analogWrite(ENB, outputright);
-
-  Serial.print(leftMotorPulses);
-  Serial.print(",");
-  Serial.print(rightMotorPulses);
-  Serial.println("");
-
 }
-
-// put function definitions here:
-double PIDControlLeft(double Newsetpoint) {
-  setpoint = Newsetpoint;
+// void countPulsesB() {
   
-  return pidLeft.Compute(); 
-}
-double PIDControlRight(double Newsetpoint) {
-  setpoint = Newsetpoint;
-  
-  return pidRight.Compute(); 
-}
-
-void readEncoderLeft(){
-  int b = digitalRead(motorLeftHallB);
-  if(b > 0){
-    leftMotorPulses++;
+//   if (digitalRead(encoderPhaseB2) != digitalRead(encoderPhaseA2)) {
+//     // Serial.println("Encoder --");
+//     encoderPulsesB--;
+//     // Serial.println((encoderPulses));
+    
+//     // Serial.println("encoder A: " + (String) digitalRead(encoderPhaseA));
+//     // Serial.println("Encoder B: " + (String) digitalRead(encoderPhaseB));
+//   }
+//   else {
+//     encoderPulsesB++;
+//   }
+// }
+void setMotor(int dir, int speed, int motorEnable, int in1, int in2) {
+  analogWrite(motorEnable, speed);
+  if (dir == 1) {
+    digitalWrite(in1, HIGH);
+    digitalWrite(in2, LOW);
   }
-  else{
-    leftMotorPulses--;
+  else if (dir == -1) {
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, HIGH);
   }
-}
-void readEncoderRight(){
-  int b = digitalRead(motorRightHallB);
-  if(b > 0){
-    rightMotorPulses++;
-  }
-  else{
-    rightMotorPulses--;
+  else {
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, LOW);
   }
 }
