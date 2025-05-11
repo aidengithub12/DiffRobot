@@ -1,6 +1,7 @@
 //necessary imports
 #include <Arduino.h>
 //function definitions
+void joystickControl();
 void moveMotor(int speed, int direction, int currentSpeed);
 void accelerate();
 void countPulsesA();
@@ -17,6 +18,12 @@ int enB = 52;
 int IN1B = 50;
 int IN2B = 48;  
 
+//Joystick pins for manual control -- may be changed to actual controller in future
+int vrx = 18;
+int vry = 20;
+
+
+
 //encoder pins -- motor controller A2
 // int encoderPhaseA2 = 300;
 // int encoderPhaseB2 = 180;
@@ -26,7 +33,8 @@ int encoderPhaseA = 35; //digital interrupt pin
 //Encoder ground = gnd pin
 int encoderPhaseB = 32;
 
-
+//voltage values
+float maxVoltage = 12.0f;
 
 //Encoder Values
 volatile long encoderPulsesA = 0;
@@ -88,6 +96,13 @@ void setup() {
 }
 
 void loop() {
+  joystickControl();
+  delay(200);
+}
+
+
+void runPID(int target, int pulses, int motorEnable, int motorIN1, int motorIN2) {
+
   currentTime = micros() / 1e-6;
 
 
@@ -97,14 +112,7 @@ void loop() {
     motorRPM = ((encoderPulsesA + encoderPulsesB) / ( micros() - currentTime) * .5);
     interrupts();
   }
-  linearDisplacement = ((encoderPulsesA)* 3.14 * wheelDiameter) / 12;
-  
-  // Serial.println("Motor: " + enA);
-  // // runPID(1200, encoderPulsesA, enA, IN1, IN2);
-  // Serial.println("Motor: " + enB);
-  // runPID(2500, encoderPulsesB, enB, IN1B, IN2B);
-  // put your main code here, to run repeatedly:
-  
+  linearDisplacement = ((encoderPulsesA)* 3.14 * wheelDiameter) / 12; 
 
   // //time difference
   long currT = micros();
@@ -170,100 +178,6 @@ void loop() {
   delay(200);
 }
 
-
-void runPID(int target, int pulses, int motorEnable, int motorIN1, int motorIN2) {
-
-  //time difference
-  long currT = micros();
-  float deltaT = ((float)(currT - prevT))/(1.0e6);
-  prevT = currT;
-  int pos = 0;
-  noInterrupts();
-  pos = pulses * wheelDiameter * 3.14;
-  interrupts();
-  //error
-  int e = pos-target;
-
-  //derivative
-  float dedt = (e-eprev) / (deltaT);
-
-  //integral
-  eintegral = eintegral + e * deltaT;
-
-  //control signal
-  float u = kP*e + KD*dedt + kI*eintegral;
-  //motor power
-  float pwr = fabs(u);
-  if (pwr > 255) {
-    pwr = 255;
-  }
-  //motor direction
-  int dir = 1;
-  if (u<0) {
-    dir = -1;
-  }
-  //signal the motor
-  setMotor(dir, pwr, motorEnable, motorIN1, motorIN2);
-
-  //store previous error
-  eprev = e;
-
-  //logs
-  // Serial.print(target);
-  // Serial.print(" ");
-  // Serial.print(encoderPulsesA);
-  // Serial.println();
-}
-
-
-void moveMotor(int speed, int direction /*forward = 1 backward = -1*/, int currentSpeed) {
-  
-  if (direction == 1) {
-    digitalWrite(IN1, HIGH);
-    digitalWrite(IN2, LOW);
-    for (int i = 0; i < speed; i++) {
-      analogWrite(enA, i);
-      delay(20);
-      // Serial.println(i);
-    }
-    // Serial.println("forward ran");
-    // Serial.println("EP: " + encoderPulses);
-    
-    // Serial.println("DA: " + digitalRead(encoderPhaseA));
-  }
-  else if (direction == -1) {
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, HIGH);
-    for (int i = 0; i < speed; i++) {
-      analogWrite(enA, i);
-      delay(20);
-    }
-    // Serial.println("backward Ran");
-  }
-  // analogWrite(enA, speed);
-  // Serial.println("speed changed");
-  currentSpeed = speed;
-}
-void accelerate() {
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2,HIGH);
-  for (int i = 0; i < 256; ++i) {
-    analogWrite(enA, i);
-    delay(20);
-  }
-  delay(2000);
-  for (int i = 255; i <=0; --i) {
-    analogWrite(enA, i);
-    delay(20);
-  }
-}
-void decelerateMotor(int currentSpeed) {
-  for (int i = currentSpeed; i >=0; i--){
-    analogWrite(enA, i);
-
-  }
-}
-
 void countPulsesA() {
   
   if (digitalRead(encoderPhaseB) != digitalRead(encoderPhaseA)) {
@@ -306,4 +220,31 @@ void setMotor(int dir, int speed, int motorEnable, int in1, int in2) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, LOW);
   }
+}
+
+
+void joystickControl() {
+  int xVal = analogRead(vrx);
+  int yval = analogRead(vry);
+
+  float xScalar = map(xVal, 0, 1023, 0, 1);
+  float yScalar = map(yval, 0, 1023, 0, 1);
+
+  float pwr = maxVoltage * yScalar;
+
+
+  if (xScalar < 0.35) {
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, HIGH);
+  }
+  else if (xScalar > 0.65) {
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, LOW);
+  }
+  else {
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+  }
+
+  analogWrite(enA, pwr);
 }
