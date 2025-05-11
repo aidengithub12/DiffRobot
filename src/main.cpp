@@ -5,7 +5,7 @@ void moveMotor(int speed, int direction, int currentSpeed);
 void accelerate();
 void countPulsesA();
 void countPulsesB();
-void runPID(int target, int pulses, int motorEnable, int motorIN1, int motorIN2);         
+void runPID(int targetChange);         
 void setMotor(int dir, int speed, int motorEnable, int in1, int in2);
 //Motor Controller A
 int enA = 12;
@@ -58,7 +58,7 @@ long prevT = 0;
 float eprev = 0;
 float eintegral = 0;
 const int tolerance = 0.5;
-int target = 10; //meters
+float target = 10; //meters
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -88,6 +88,17 @@ void setup() {
 }
 
 void loop() {
+  //auto code
+  while (Serial.available() > 0) {
+    float distance = Serial.readString().toFloat();
+    runPID(distance);
+  }
+  
+}
+
+
+void runPID(int targetChange) {
+  target = target + targetChange;
   currentTime = micros() / 1e-6;
 
 
@@ -98,12 +109,6 @@ void loop() {
     interrupts();
   }
   linearDisplacement = ((encoderPulsesA)* 3.14 * wheelDiameter) / 12;
-  
-  // Serial.println("Motor: " + enA);
-  // // runPID(1200, encoderPulsesA, enA, IN1, IN2);
-  // Serial.println("Motor: " + enB);
-  // runPID(2500, encoderPulsesB, enB, IN1B, IN2B);
-  // put your main code here, to run repeatedly:
   
 
   // //time difference
@@ -152,67 +157,7 @@ void loop() {
   Serial.println(target);
   Serial.print(">currentpos:");
   Serial.println(pos);
-  // Serial.println("*********************************************************");
-  // Serial.print(target);
-  // Serial.print(" ");
-  // Serial.print(encoderPulsesA);
-  // Serial.println();
-  // Serial.println(pwr);
-  // Serial.println(analogRead(enA));
-  // Serial.println(currentSpeed);
-  // Serial.println(desiredPosition);
-  // Serial.println(motorRPM);
-  Serial.println("*********************************************************");
-  while (Serial.available() > 0) {
-    target = Serial.readString().toInt();
-    Serial.flush();
-  }
   delay(200);
-}
-
-
-void runPID(int target, int pulses, int motorEnable, int motorIN1, int motorIN2) {
-
-  //time difference
-  long currT = micros();
-  float deltaT = ((float)(currT - prevT))/(1.0e6);
-  prevT = currT;
-  int pos = 0;
-  noInterrupts();
-  pos = pulses * wheelDiameter * 3.14;
-  interrupts();
-  //error
-  int e = pos-target;
-
-  //derivative
-  float dedt = (e-eprev) / (deltaT);
-
-  //integral
-  eintegral = eintegral + e * deltaT;
-
-  //control signal
-  float u = kP*e + KD*dedt + kI*eintegral;
-  //motor power
-  float pwr = fabs(u);
-  if (pwr > 255) {
-    pwr = 255;
-  }
-  //motor direction
-  int dir = 1;
-  if (u<0) {
-    dir = -1;
-  }
-  //signal the motor
-  setMotor(dir, pwr, motorEnable, motorIN1, motorIN2);
-
-  //store previous error
-  eprev = e;
-
-  //logs
-  // Serial.print(target);
-  // Serial.print(" ");
-  // Serial.print(encoderPulsesA);
-  // Serial.println();
 }
 
 
