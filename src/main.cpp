@@ -47,13 +47,9 @@ float wheelDiameter = 0.035; //meters
 float motorRPM = 0; //RPM
 //car speed
 float linearDisplacement = 0;
-//number of motors
-int numMotors = 2;
 //current values
 int currentPosition = 0; //in rotations
 int desiredPosition = 0; //in meters
-int error = 0;
-int currentSpeed = 0;
 long prevT = 0;
 float eprev = 0;
 float eintegral = 0;
