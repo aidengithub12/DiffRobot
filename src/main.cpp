@@ -9,8 +9,11 @@ void countPulsesA();
 void countPulsesB();
 void runPID(int targetChange, int en, int in, int inn,int enca);       
 void setMotor(int dir, int speed, int motorEnable, int in1, int in2);
+void distanceSensor();
 
-
+//led pins
+int ledLeft;
+int ledRight;
 
 //Servos
 
@@ -22,6 +25,10 @@ Servo leftArm;
 Servo rightArm;
 Servo Head;
 
+//distance sensor
+int TrigPin;
+int EchoPin;
+float distance, duration = 0.0f;
 
 //Motor Controller A
 int enA = 12;
@@ -109,6 +116,10 @@ void setup() {
   rightArm.write(0);
   Head.attach(0);
 
+  //set up distance sensor
+  pinMode(TrigPin, OUTPUT);  
+	pinMode(EchoPin, INPUT);  
+
   //timer start
   startTime = micros() / 1e-6;
   //Setup Finished
@@ -120,6 +131,9 @@ void loop() {
   
   runPID(distance, enA, IN1, IN2,encoderPulsesA);
   runPID(distance, enB,IN1B, IN2B,encoderPulsesC);
+
+
+  //servo functionality
   if (linearDisplacement >= 2) {
     leftArm.write(leftArm.read() + 15);
     rightArm.write(rightArm.read() - 15); //TODO: not sure this is possible but will be fixed in tests
@@ -133,6 +147,17 @@ void loop() {
     if (rightArm.read() >= 180) {
       rightArm.write(0);
     }
+  }
+
+  //distance sensor logic
+  distanceSensor();
+  if (distance <= 10) {
+    //stop robot due to possible crash
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+    digitalWrite(IN1B, LOW);
+    digitalWrite(IN2B, LOW);
+    eprev = 0; //TODO: not sure if this is right
   }
   //logs
   Serial.print(">setpoint:");
@@ -198,6 +223,12 @@ void runPID(int targetChange, int en, int in, int inn, int enca) {
   }
   if (abs(e) <= tolerance || pwr < 75) {
     pwr = 0;
+    digitalWrite(ledLeft,LOW);
+    digitalWrite(ledRight, LOW);
+  }
+  else {
+    digitalWrite(ledLeft,HIGH);
+    digitalWrite(ledRight, HIGH);
   }
   Serial.println(e);
   Serial.println(pwr);
@@ -303,4 +334,16 @@ void setMotor(int dir, int speed, int motorEnable, int in1, int in2) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, LOW);
   }
+}
+
+
+void distanceSensor() {
+  digitalWrite(TrigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TrigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TrigPin, LOW);
+  duration = pulseIn(EchoPin, HIGH);
+  distance = (duration*.0343)/2;
+  delay(100);  
 }
