@@ -1,5 +1,7 @@
 //necessary imports
 #include <Arduino.h>
+#include <Servo.h>
+
 //function definitions
 void moveMotor(int speed, int direction, int currentSpeed);
 void accelerate();
@@ -7,6 +9,20 @@ void countPulsesA();
 void countPulsesB();
 void runPID(int targetChange, int en, int in, int inn,int enca);       
 void setMotor(int dir, int speed, int motorEnable, int in1, int in2);
+
+
+
+//Servos
+
+int lapin;
+int rapin;
+int headpin;
+
+Servo leftArm;
+Servo rightArm;
+Servo Head;
+
+
 //Motor Controller A
 int enA = 12;
 int IN1 = 25;
@@ -84,6 +100,14 @@ void setup() {
   digitalWrite(IN1B, LOW);
   digitalWrite(IN2B, LOW);
   
+  //set up servos and set them to their zero position
+  leftArm.attach(lapin);
+  rightArm.attach(rapin);
+  Head.attach(headpin);
+
+  leftArm.write(0);
+  rightArm.write(0);
+  Head.attach(0);
 
   //timer start
   startTime = micros() / 1e-6;
@@ -96,6 +120,20 @@ void loop() {
   
   runPID(distance, enA, IN1, IN2,encoderPulsesA);
   runPID(distance, enB,IN1B, IN2B,encoderPulsesC);
+  if (linearDisplacement >= 2) {
+    leftArm.write(leftArm.read() + 15);
+    rightArm.write(rightArm.read() - 15); //TODO: not sure this is possible but will be fixed in tests
+    Head.write(Head.read() + 15);
+    if (Head.read() >= 180) {
+      Head.write(0);
+    }
+    if (leftArm.read() >= 180) {
+      leftArm.write(0);
+    }
+    if (rightArm.read() >= 180) {
+      rightArm.write(0);
+    }
+  }
   //logs
   Serial.print(">setpoint:");
   Serial.println(target);

@@ -1,6 +1,6 @@
 Robot ideas:
 
-	1. add arm and head swivel functionality (no need for synchronization quite yet)
+	1. add arm and head swivel functionality (no need for synchronization quite yet) //not tested but added
 	2. add distance sensor functionality
 	3. add led functionality
 	4. create an autonomous routine for future testing
