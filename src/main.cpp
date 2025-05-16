@@ -1,5 +1,7 @@
 //necessary imports
 #include <Arduino.h>
+#include <Gyro/Gyro.h>
+
 //function definitions
 void moveMotor(int speed, int direction, int currentSpeed);
 void accelerate();
@@ -84,6 +86,12 @@ void setup() {
   digitalWrite(IN1B, LOW);
   digitalWrite(IN2B, LOW);
   
+  //Gyro Setup
+  Wire.begin();                      // Initialize comunication
+  Wire.beginTransmission(MPU);       // Start communication with MPU6050 // MPU=0x68
+  Wire.write(0x6B);                  // Talk to the register 6B
+  Wire.write(0x00);                  // Make reset - place a 0 into the 6B register
+  Wire.endTransmission(true);        //end the transmission
 
   //timer start
   startTime = micros() / 1e-6;
@@ -94,8 +102,12 @@ void setup() {
 void loop() {
   //auto code
   
-  runPID(distance, enA, IN1, IN2,encoderPulsesA);
-  runPID(distance, enB,IN1B, IN2B,encoderPulsesC);
+  readData();
+
+  runPID(-roll, enA, IN1, IN2,encoderPulsesA);
+  runPID(-roll, enB,IN1B, IN2B,encoderPulsesC);
+
+
   //logs
   Serial.print(">setpoint:");
   Serial.println(target);
@@ -116,7 +128,7 @@ void loop() {
 
 
 void runPID(int targetChange, int en, int in, int inn, int enca) {
-  target = target + targetChange;
+  target = 0;
   currentTime = micros() / 1e-6;
 
 
@@ -133,7 +145,7 @@ void runPID(int targetChange, int en, int in, int inn, int enca) {
   long currT = micros();
   float deltaT = ((float)(currT - prevT))/(1.0e6);
   prevT = currT;
-  int pos = 0;
+  int pos = roll;
   noInterrupts();
   pos = ((enca)* 3.14 * wheelDiameter) / 12;
   interrupts();
