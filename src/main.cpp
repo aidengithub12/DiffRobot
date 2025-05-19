@@ -9,13 +9,13 @@ void runPID(int targetChange, int en, int in, int inn,int enca);
 void setMotor(int dir, int speed, int motorEnable, int in1, int in2);
 //Motor Controller A
 int enA = 12;
-int IN1 = 25;
-int IN2 = 33;
+int IN1 = 19; //19
+int IN2 = 18; //18
 
 //motor controller B
-int enB = 5;
+int enB = 15;
 int IN1B = 23;
-int IN2B = 22;  
+int IN2B = 5;  
 
 //encoder pins -- motor controller A2
 // int encoderPhaseA2 = 300;
