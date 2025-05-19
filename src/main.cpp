@@ -201,7 +201,7 @@ void runPID(int input, int en, int in, int inn, int enca) {
   Serial.println(e);
   Serial.print(">pwr:");
   Serial.println(pwr);
-
+  Serial.println("DIR: " + (String) dir + "\nEN: " + (String) en + "\nIN1: " + (String) in + "\nIN2: " + (String) inn + "\nPWR: " + (String) pwr);
   //signal the motor
   setMotor(dir, pwr, en, in, inn);
   Serial.print("RAN MOTOR ***********************************************************************");
