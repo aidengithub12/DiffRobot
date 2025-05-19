@@ -11,13 +11,13 @@ void runPID(int targetChange, int en, int in, int inn,int enca);
 void setMotor(int dir, int speed, int motorEnable, int in1, int in2);
 //Motor Controller A
 int enA = 12;
-int IN1 = 25;
-int IN2 = 33;
+int IN1 = 19; //19
+int IN2 = 18; //18
 
 //motor controller B
-int enB = 5;
+int enB = 15;
 int IN1B = 23;
-int IN2B = 22;  
+int IN2B = 5;  
 
 //encoder pins -- motor controller A2
 // int encoderPhaseA2 = 300;
@@ -41,9 +41,15 @@ double kP = 15;
 double kI = 5;
 double KD = 0;
 
+//Gyro pins
+int SCLpin = 25;
+int SDApin = 33;
+
+
+
 //time variables
 float startTime = 0;
-float currentTime = 0;
+float currentTime1 = 0;
 
 //wheel diameter
 float wheelDiameter = 0.046; //meters
@@ -57,7 +63,7 @@ int desiredPosition = 0; //in meters
 long prevT = 0;
 float eprev = 0;
 float eintegral = 0;
-const int tolerance = 0.005;
+const int tolerance = 0;
 float target = 0; //meters
 float distance = 0;
 void setup() {
@@ -72,7 +78,7 @@ void setup() {
   pinMode(enB, OUTPUT);
   pinMode(IN1B, OUTPUT);
   pinMode(IN2B, OUTPUT);
-  
+
   //set up encoder pins
   pinMode(encoderPhaseA, INPUT_PULLUP);
   pinMode(encoderPhaseB, INPUT_PULLUP);
@@ -87,70 +93,87 @@ void setup() {
   digitalWrite(IN2B, LOW);
   
   //Gyro Setup
-  Wire.begin();                      // Initialize comunication
-  Wire.beginTransmission(MPU);       // Start communication with MPU6050 // MPU=0x68
-  Wire.write(0x6B);                  // Talk to the register 6B
-  Wire.write(0x00);                  // Make reset - place a 0 into the 6B register
-  Wire.endTransmission(true);        //end the transmission
+  setupGyro();       //end the transmission
 
   //timer start
   startTime = micros() / 1e-6;
+
+
+  //test motors
+  Serial.println("motor tests");
+  setMotor(1,150,enA,IN1,IN2);
+  delay(2000);
+  Serial.println("backward 1");
+  setMotor(-1,150,enA,IN1 ,IN2);
+  delay(2000);
+  Serial.println("Stop 1");
+  setMotor(1,0,enA,IN1,IN2);
+
   //Setup Finished
   // Serial.println("Setup has finished.");
+  
 }
 
 void loop() {
   //auto code
   
   readData();
+  
+  runPID(-pitch, enA, IN1, IN2,encoderPulsesA);
+  runPID(-pitch, enB,IN1B, IN2B,encoderPulsesC);
 
-  runPID(-roll, enA, IN1, IN2,encoderPulsesA);
-  runPID(-roll, enB,IN1B, IN2B,encoderPulsesC);
 
-
-  //logs
+  // //logs
   Serial.print(">setpoint:");
   Serial.println(target);
   Serial.print(">currentposright:");
   Serial.println(encoderPulsesA);
   Serial.print(">currentposleft:");
   Serial.println(encoderPulsesC);
-  Serial.print(">enb:");
-  Serial.println(analogRead(enB));
   Serial.print(">lda:");
   Serial.println(((encoderPulsesA)* 3.14 * wheelDiameter) / 12);
+  Serial.print(">enb:");
+  Serial.println(analogRead(enB));
+  Serial.print(">ena:");
+  Serial.println(analogRead(enA));
   Serial.print(">ldc:");
   Serial.println(((encoderPulsesC)* 3.14 * wheelDiameter) / 12);
+  Serial.print(">roll:");
+  Serial.println(roll);
+  Serial.print(">pitch:");
+  Serial.println(pitch);
+  Serial.print(">yaw:");
+  Serial.println(yaw);
   
   
   
 }
 
 
-void runPID(int targetChange, int en, int in, int inn, int enca) {
+void runPID(int input, int en, int in, int inn, int enca) {
   target = 0;
-  currentTime = micros() / 1e-6;
+  currentTime1 = micros() / 1e-6;
 
 
-  if ((currentTime - startTime) > 1) {
-    startTime = micros() / 1e-6;
-    noInterrupts();
-    motorRPM = ((encoderPulsesA + encoderPulsesB) / ( micros() - currentTime) * .5);
-    interrupts();
-  }
-  linearDisplacement = ((enca)* 3.14 * wheelDiameter) / 12;
+  // if ((currentTime1 - startTime) > 1) {
+  //   startTime = micros() / 1e-6;
+  //   noInterrupts();
+  //   motorRPM = ((encoderPulsesA + encoderPulsesB) / ( micros() - currentTime1) * .5);
+  //   interrupts();
+  // }
+  // linearDisplacement = ((enca)* 3.14 * wheelDiameter) / 12;
   
 
   // //time difference
   long currT = micros();
   float deltaT = ((float)(currT - prevT))/(1.0e6);
   prevT = currT;
-  int pos = roll;
+  float pos = yaw;
   noInterrupts();
-  pos = ((enca)* 3.14 * wheelDiameter) / 12;
+  // pos = ((enca)* 3.14 * wheelDiameter) / 12;
   interrupts();
   //error
-  int e = pos-target;
+  float e = pos-target;
 
   // //derivative
   float dedt = (e-eprev) / (deltaT);
@@ -172,12 +195,16 @@ void runPID(int targetChange, int en, int in, int inn, int enca) {
   }
   if (abs(e) <= tolerance || pwr < 75) {
     pwr = 0;
+    Serial.println("manipulated ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''");
   }
+  Serial.print(">e:");
   Serial.println(e);
+  Serial.print(">pwr:");
   Serial.println(pwr);
 
   //signal the motor
   setMotor(dir, pwr, en, in, inn);
+  Serial.print("RAN MOTOR ***********************************************************************");
   // setMotor(dir, pwr, enB, IN1B, IN2B);
   Serial.print(">dir:");
   Serial.println(dir);
