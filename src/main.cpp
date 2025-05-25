@@ -8,7 +8,7 @@ void accelerate();
 void countPulsesA();
 void countPulsesB();
 void runPID(int targetChange, int en, int in, int inn,int enca);       
-void setMotor(int dir, int speed, int motorEnable, int in1, int in2);
+void setMotor(int dir, float speed, int motorEnable, int in1, int in2);
 //Motor Controller A
 int enA = 12;
 int IN1 = 19; //19
@@ -38,7 +38,7 @@ volatile long encoderPulsesC = 0;
 volatile long encoderPulsesD = 0;
 //PID Constants
 double kP = 15;
-double kI = 5;
+double kI = 0;
 double KD = 0;
 
 //Gyro pins
@@ -63,7 +63,7 @@ int desiredPosition = 0; //in meters
 long prevT = 0;
 float eprev = 0;
 float eintegral = 0;
-const int tolerance = 0;
+const int tolerance = 0.5;
 float target = 0; //meters
 float distance = 0;
 void setup() {
@@ -124,26 +124,26 @@ void loop() {
 
 
   // //logs
-  Serial.print(">setpoint:");
-  Serial.println(target);
-  Serial.print(">currentposright:");
-  Serial.println(encoderPulsesA);
-  Serial.print(">currentposleft:");
-  Serial.println(encoderPulsesC);
-  Serial.print(">lda:");
-  Serial.println(((encoderPulsesA)* 3.14 * wheelDiameter) / 12);
-  Serial.print(">enb:");
-  Serial.println(analogRead(enB));
-  Serial.print(">ena:");
-  Serial.println(analogRead(enA));
-  Serial.print(">ldc:");
-  Serial.println(((encoderPulsesC)* 3.14 * wheelDiameter) / 12);
-  Serial.print(">roll:");
-  Serial.println(roll);
-  Serial.print(">pitch:");
-  Serial.println(pitch);
-  Serial.print(">yaw:");
-  Serial.println(yaw);
+  // Serial.print(">setpoint:");
+  // Serial.println(target);
+  // Serial.print(">currentposright:");
+  // Serial.println(encoderPulsesA);
+  // Serial.print(">currentposleft:");
+  // Serial.println(encoderPulsesC);
+  // Serial.print(">lda:");
+  // Serial.println(((encoderPulsesA)* 3.14 * wheelDiameter) / 12);
+  // Serial.print(">enb:");
+  // Serial.println(analogRead(enB));
+  // Serial.print(">ena:");
+  // Serial.println(analogRead(enA));
+  // Serial.print(">ldc:");
+  // Serial.println(((encoderPulsesC)* 3.14 * wheelDiameter) / 12);
+  // Serial.print(">roll:");
+  // Serial.println(roll);
+  // Serial.print(">pitch:");
+  // Serial.println(pitch);
+  // Serial.print(">yaw:");
+  // Serial.println(yaw);
   
   
   
@@ -155,13 +155,13 @@ void runPID(int input, int en, int in, int inn, int enca) {
   currentTime1 = micros() / 1e-6;
 
 
-  // if ((currentTime1 - startTime) > 1) {
-  //   startTime = micros() / 1e-6;
-  //   noInterrupts();
-  //   motorRPM = ((encoderPulsesA + encoderPulsesB) / ( micros() - currentTime1) * .5);
-  //   interrupts();
-  // }
-  // linearDisplacement = ((enca)* 3.14 * wheelDiameter) / 12;
+  if ((currentTime1 - startTime) > 1) {
+    startTime = micros() / 1e-6;
+    noInterrupts();
+    motorRPM = ((encoderPulsesA + encoderPulsesB) / ( micros() - currentTime1) * .5);
+    interrupts();
+  }
+  linearDisplacement = ((enca)* 3.14 * wheelDiameter) / 12;
   
 
   // //time difference
@@ -195,16 +195,15 @@ void runPID(int input, int en, int in, int inn, int enca) {
   }
   if (abs(e) <= tolerance || pwr < 75) {
     pwr = 0;
-    Serial.println("manipulated ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''");
+    // Serial.println("manipulated ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''");
   }
-  Serial.print(">e:");
-  Serial.println(e);
-  Serial.print(">pwr:");
-  Serial.println(pwr);
-  Serial.println("DIR: " + (String) dir + "\nEN: " + (String) en + "\nIN1: " + (String) in + "\nIN2: " + (String) inn + "\nPWR: " + (String) pwr);
+  // Serial.print(">e:");
+  // Serial.println(e);
+  // Serial.print(">pwr:");
+  // Serial.println(pwr);
   //signal the motor
-  setMotor(dir, pwr, en, in, inn);
-  Serial.print("RAN MOTOR ***********************************************************************");
+  setMotor(dir, (float) pwr, en, in, inn);
+  // Serial.print("RAN MOTOR ***********************************************************************");
   // setMotor(dir, pwr, enB, IN1B, IN2B);
   Serial.print(">dir:");
   Serial.println(dir);
@@ -290,8 +289,9 @@ void countPulsesB() {
     encoderPulsesC++;
   }
 }
-void setMotor(int dir, int speed, int motorEnable, int in1, int in2) {
-  analogWrite(motorEnable, speed);
+void setMotor(int dir, float speed, int motorEnable, int in1, int in2) {
+  analogWrite(motorEnable, (int) speed);
+  Serial.println("DIR: " + (String) dir + "\nEN: " + (String) motorEnable +  "\nIN1: " + (String) in1 + "\nIN2: " + (String) in2 + "\nPWR: " + (String) speed + "\nYAW: " + (String)yaw);
   if (dir == 1) {
     digitalWrite(in1, HIGH);
     digitalWrite(in2, LOW);
@@ -304,4 +304,5 @@ void setMotor(int dir, int speed, int motorEnable, int in1, int in2) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, LOW);
   }
+  // delay(200);
 }
