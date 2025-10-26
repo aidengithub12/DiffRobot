@@ -10,26 +10,26 @@ void countPulsesB();
 void runPID(int targetChange, int en, int in, int inn,int enca);       
 void setMotor(int dir, float speed, int motorEnable, int in1, int in2);
 //Motor Controller A
-int enA = 12;
-int IN1 = 19; //19
-int IN2 = 18; //18
+int enA = 14;
+int IN1 = 2; //19
+int IN2 = 6; //18
 
 //motor controller B
 int enB = 15;
-int IN1B = 23;
-int IN2B = 5;  
+int IN1B = 9;
+int IN2B = 32;  
 
 //encoder pins -- motor controller A2
 // int encoderPhaseA2 = 300;
 // int encoderPhaseB2 = 180;
 //encoder pins -- Motor Controller A1
-int encoderPhaseA = 35; //digital interrupt pin
+int encoderPhaseA = 21; //digital interrupt pin
 //Encoder power = 5V pin
 //Encoder ground = gnd pin
-int encoderPhaseB = 32;
+int encoderPhaseB = 22;
 
-int encoderA2 = 14;
-int encoderB2 = 4;
+int encoderA2 = 23;
+int encoderB2 = 24;
 
 //Encoder Values
 volatile long encoderPulsesA = 0;
@@ -42,8 +42,8 @@ double kI = 0;
 double KD = 0;
 
 //Gyro pins
-int SCLpin = 25;
-int SDApin = 33;
+int SCLpin = 17;
+int SDApin = 16;
 
 
 
@@ -118,7 +118,7 @@ void loop() {
   //auto code
   
   readData();
-  
+  //TOD: send data to csv file 
   runPID(-pitch, enA, IN1, IN2,encoderPulsesA);
   runPID(-pitch, enB,IN1B, IN2B,encoderPulsesC);
 
