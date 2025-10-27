@@ -1,6 +1,7 @@
 //necessary imports
 #include <Arduino.h>
 #include <Gyro/Gyro.h>
+#include <fstream>
 
 //function definitions
 void moveMotor(int speed, int direction, int currentSpeed);
@@ -145,7 +146,18 @@ void loop() {
   // Serial.print(">yaw:");
   // Serial.println(yaw);
   
-  
+  std::ofstream outputFile("Data.csv");
+   if (!outputFile.is_open()) {
+        Serial.println("could not access file");
+    }
+    else {
+      // Write data to the file
+      outputFile << 2;
+
+    }
+
+    // Close the file
+    outputFile.close();
   
 }
 
