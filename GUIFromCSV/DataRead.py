@@ -1,4 +1,4 @@
-path = 'C:\\Users\\HP\\OneDrive\\Documents\\Github\\DiffRobot\\Data.csv'
+path = 'C:\\Users\\HP\\OneDrive\\Documents\\Github\\DiffRobot\\Data.txt'
 def getData():
     with open(path,"r") as file:
         content = file.read()
