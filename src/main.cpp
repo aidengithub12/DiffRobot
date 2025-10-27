@@ -46,8 +46,23 @@ double KD = 0;
 int SCLpin = 17;
 int SDApin = 16;
 
+//distance sensor pins
+int echoPin = 37;
+int trigPin = 36;
 
+//distance sensor values
+float distance, duration;
 
+//batt health pins
+int currentPin = 19;
+int voltagePin = 18;
+
+//batt health variables
+float current = 0.0f;
+float voltage = 0.0f;
+
+//is running variable -if estop is not turned on
+bool isOn = true;
 //time variables
 float startTime = 0;
 float currentTime1 = 0;
@@ -66,7 +81,6 @@ float eprev = 0;
 float eintegral = 0;
 const int tolerance = 0.5;
 float target = 0; //meters
-float distance = 0;
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -80,6 +94,9 @@ void setup() {
   pinMode(IN1B, OUTPUT);
   pinMode(IN2B, OUTPUT);
 
+  //set up distance sensor pins
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin,INPUT);
   //set up encoder pins
   pinMode(encoderPhaseA, INPUT_PULLUP);
   pinMode(encoderPhaseB, INPUT_PULLUP);
@@ -87,12 +104,17 @@ void setup() {
   pinMode(encoderB2, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(encoderPhaseA), countPulsesA, CHANGE);
   attachInterrupt(digitalPinToInterrupt(encoderA2), countPulsesB, CHANGE);
+
+  //battery health pins
+  pinMode(voltagePin, INPUT);
+  pinMode(current,INPUT);
+
   //turn off motors
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, LOW);
   digitalWrite(IN1B, LOW);
   digitalWrite(IN2B, LOW);
-  
+
   //Gyro Setup
   setupGyro();       //end the transmission
 
@@ -118,6 +140,21 @@ void setup() {
 void loop() {
   //auto code
   
+  //distance sensor reading
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  duration = pulseIn(echoPin, HIGH);
+  distance = (duration*.0343)/2;
+
+
+  //battery health checks
+  voltage = analogRead(voltagePin);
+  current = analogRead(currentPin);
+
   readData();
   //TOD: send data to csv file 
   runPID(-pitch, enA, IN1, IN2,encoderPulsesA);
@@ -152,7 +189,18 @@ void loop() {
     }
     else {
       // Write data to the file
-      outputFile << 2;
+      outputFile << 2; //gyro data - packaged somehow, or change python code to expect multiple values
+      outputFile << ",";
+      outputFile << distance;
+      outputFile << ",";
+      outputFile << motorRPM;
+      outputFile << ",";
+      outputFile << voltage;
+      outputFile << ",";
+      outputFile << current;
+      outputFile << ",";
+      outputFile << isOn;
+      outputFile << ",";
 
     }
 
