@@ -1,3 +1,5 @@
+#GPS,DS,SPD,BV,BC,IR,
+
 path = 'C:\\Users\\HP\\OneDrive\\Documents\\Github\\DiffRobot\\Data.txt'
 def getData():
     with open(path,"r") as file:
