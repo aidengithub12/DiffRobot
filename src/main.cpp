@@ -1,3 +1,5 @@
+#define ACTIVE
+
 //necessary imports
 #include <Arduino.h>
 #include <Gyro/Gyro.h>
@@ -161,51 +163,53 @@ void loop() {
   runPID(-pitch, enB,IN1B, IN2B,encoderPulsesC);
 
 
-  // //logs
-  // Serial.print(">setpoint:");
-  // Serial.println(target);
-  // Serial.print(">currentposright:");
-  // Serial.println(encoderPulsesA);
-  // Serial.print(">currentposleft:");
-  // Serial.println(encoderPulsesC);
-  // Serial.print(">lda:");
-  // Serial.println(((encoderPulsesA)* 3.14 * wheelDiameter) / 12);
-  // Serial.print(">enb:");
-  // Serial.println(analogRead(enB));
-  // Serial.print(">ena:");
-  // Serial.println(analogRead(enA));
-  // Serial.print(">ldc:");
-  // Serial.println(((encoderPulsesC)* 3.14 * wheelDiameter) / 12);
-  // Serial.print(">roll:");
-  // Serial.println(roll);
-  // Serial.print(">pitch:");
-  // Serial.println(pitch);
-  // Serial.print(">yaw:");
-  // Serial.println(yaw);
+  //logs
+  #ifdef DEBUG
+  Serial.print(">setpoint:");
+  Serial.println(target);
+  Serial.print(">currentposright:");
+  Serial.println(encoderPulsesA);
+  Serial.print(">currentposleft:");
+  Serial.println(encoderPulsesC);
+  Serial.print(">lda:");
+  Serial.println(((encoderPulsesA)* 3.14 * wheelDiameter) / 12);
+  Serial.print(">enb:");
+  Serial.println(analogRead(enB));
+  Serial.print(">ena:");
+  Serial.println(analogRead(enA));
+  Serial.print(">ldc:");
+  Serial.println(((encoderPulsesC)* 3.14 * wheelDiameter) / 12);
+  Serial.print(">roll:");
+  Serial.println(roll);
+  Serial.print(">pitch:");
+  Serial.println(pitch);
+  Serial.print(">yaw:");
+  Serial.println(yaw);
+  #endif
   
-  std::ofstream outputFile("Data.csv");
-   if (!outputFile.is_open()) {
-        Serial.println("could not access file");
-    }
-    else {
-      // Write data to the file
-      outputFile << 2; //gyro data - packaged somehow, or change python code to expect multiple values
-      outputFile << ",";
-      outputFile << distance;
-      outputFile << ",";
-      outputFile << motorRPM;
-      outputFile << ",";
-      outputFile << voltage;
-      outputFile << ",";
-      outputFile << current;
-      outputFile << ",";
-      outputFile << isOn;
-      outputFile << ",";
+  // std::ofstream outputFile("Data.csv");
+  //  if (!outputFile.is_open()) {
+  //       Serial.println("could not access file");
+  //   }
+  //   else {
+  //     // Write data to the file
+  //     outputFile << 2; //gyro data - packaged somehow, or change python code to expect multiple values
+  //     outputFile << ",";
+  //     outputFile << distance;
+  //     outputFile << ",";
+  //     outputFile << motorRPM;
+  //     outputFile << ",";
+  //     outputFile << voltage;
+  //     outputFile << ",";
+  //     outputFile << current;
+  //     outputFile << ",";
+  //     outputFile << isOn;
+  //     outputFile << ",";
 
-    }
+  //   }
 
-    // Close the file
-    outputFile.close();
+  //   // Close the file
+  //   outputFile.close();
   
 }
 
